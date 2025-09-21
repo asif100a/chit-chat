@@ -13,7 +13,7 @@ export default function ChatBody({ handleSendMessage }: ChatBodyProps) {
         {/* Chat header */}
         <div className="flex items-center space-x-4 p-4 bg-yellow-primary border-b">
           <Image
-            src="/images/dashboard/student.png"
+            src="/images/user2.webp"
             alt="avatar"
             width={80}
             height={80}
@@ -43,7 +43,7 @@ export default function ChatBody({ handleSendMessage }: ChatBodyProps) {
                   {/* Received message */}
                   <div className="flex items-start space-x-2">
                     <Image
-                      src="/images/dashboard/student.png"
+                      src="/images/user2.webp"
                       alt="avatar"
                       width={60}
                       height={60}
@@ -61,7 +61,7 @@ export default function ChatBody({ handleSendMessage }: ChatBodyProps) {
                       Hi Jake, how are you?
                     </div>
                     <Image
-                      src="/images/dashboard/user.jpg"
+                      src="/images/user1.jpg"
                       alt="avatar"
                       width={60}
                       height={60}
@@ -80,7 +80,8 @@ export default function ChatBody({ handleSendMessage }: ChatBodyProps) {
             >
               <input
                 type="text"
-                placeholder="Search"
+                name="message"
+                placeholder="Type your message..."
                 className="w-full h-auto py-3  text-[#262626] placeholder:text-[#909090] focus:outline-none"
               />
               <button type="submit" className="cursor-pointer">

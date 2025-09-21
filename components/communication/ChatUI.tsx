@@ -2,8 +2,9 @@
 
 import { SimpleSearchForm } from "@/components/custom-ui/actions";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ChatBody from "./_components/ChatBody";
+import {io} from 'socket.io-client';
 
 interface ChatUIProps {
   activeTab: string;
@@ -14,6 +15,9 @@ interface GroupChatTypes {
   text: string;
   timeAgo: number;
 }
+
+// Connect to backend
+const socket = io(process.env.NEXT_PUBLIC_BACKEND_SERVER)
 
 const groupChatData: GroupChatTypes[] = [
   {
@@ -39,12 +43,28 @@ const groupChatData: GroupChatTypes[] = [
 ];
 
 const ChatUI = ({ activeTab }: ChatUIProps) => {
+  const [message, setMessage] = useState('');
+  const [chat, setChat] = useState([]);
   const [searchTerm, setSearchTerm] = useState<string>("");
 
+  useEffect(() => {
+    // Listen for the chat message
+    socket.on("chatMessage", (msg) => {
+      setChat((prev) => [...prev, msg]);
+    });
+
+    return () => {
+      socket.off("chatMessage") // Cleanup
+    }
+  }, []);
+
   // Handle Send Message
-  const handleSendGroupMessage = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSendMessage = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // console.log("Message sent!");
+    
+    const message = (e.target as HTMLFormElement).message.value;
+
+    console.log("Message: ", message);
   };
 
   // Handle Notification
@@ -71,7 +91,7 @@ const ChatUI = ({ activeTab }: ChatUIProps) => {
             >
               <div className="flex items-center space-x-3">
                 <Image
-                  src="/images/dashboard/student.png"
+                  src="/images/user1.jpg"
                   alt="avatar"
                   width={80}
                   height={80}
@@ -79,7 +99,7 @@ const ChatUI = ({ activeTab }: ChatUIProps) => {
                 />
                 <div className="text-base">
                   <p className="text-lg font-semibold text-black-primary text-nowrap">
-                    {chat.group}
+                    {chat.name}
                   </p>
                   <p className="text-black-normal">{chat.text}</p>
                 </div>
@@ -93,7 +113,7 @@ const ChatUI = ({ activeTab }: ChatUIProps) => {
       </aside>
 
       {/* Chat window */}
-      <ChatBody handleSendMessage={handleSendGroupMessage} />
+      <ChatBody handleSendMessage={handleSendMessage} />
     </div>
   );
 };

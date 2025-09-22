@@ -1,121 +1,169 @@
 "use client";
 
-import { SimpleSearchForm } from "@/components/custom-ui/actions";
+import { TabTypes } from "@/app/page";
 import Image from "next/image";
-import { useEffect, useState } from "react";
-import ChatBody from "./_components/ChatBody";
-import {io} from 'socket.io-client';
+import React, { useEffect, useRef, useState } from "react";
+import { FaUpload } from "react-icons/fa";
+import { io, Socket } from "socket.io-client";
 
-interface ChatUIProps {
-  activeTab: string;
-}
+export default function ChatUI({ activeTab }: { activeTab: TabTypes }) {
+  const userId = activeTab.userId;
+  const receiverId = activeTab.receiverId;
 
-interface GroupChatTypes {
-  name: string;
-  text: string;
-  timeAgo: number;
-}
+  // console.log("userId: ", userId);
+  // console.log("receiverId: ", receiverId);
+  // console.log('-----------------------------')
 
-// Connect to backend
-const socket = io(process.env.NEXT_PUBLIC_BACKEND_SERVER)
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [message, setMessage] = useState("");
+  const [image, setImage] = useState(null);
+  const [chat, setChat] = useState<any[]>([]);
+  // const fileRef = useRef<HTMLInputElement>(null);
+  // console.log("Socket ---------> ", socket);
+  console.log("chat ---------> ", chat);
+  // console.log("message ---------> ", message);
 
-const groupChatData: GroupChatTypes[] = [
-  {
-    name: "Bob Marley",
-    text: "Emily: Okk Im in.",
-    timeAgo: 37,
-  },
-  {
-    name: "Alice Smith",
-    text: "Emily: Okk Im in.",
-    timeAgo: 37,
-  },
-  {
-    name: "John Doe",
-    text: "Emily: Okk Im in.",
-    timeAgo: 37,
-  },
-  {
-    name: "Jane Williams",
-    text: "Emily: Okk Im in.",
-    timeAgo: 37,
-  },
-];
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files[0];
+    if (!file || !socket) return;
 
-const ChatUI = ({ activeTab }: ChatUIProps) => {
-  const [message, setMessage] = useState('');
-  const [chat, setChat] = useState([]);
-  const [searchTerm, setSearchTerm] = useState<string>("");
-
-  useEffect(() => {
-    // Listen for the chat message
-    socket.on("chatMessage", (msg) => {
-      setChat((prev) => [...prev, msg]);
-    });
-
-    return () => {
-      socket.off("chatMessage") // Cleanup
-    }
-  }, []);
-
-  // Handle Send Message
-  const handleSendMessage = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    
-    const message = (e.target as HTMLFormElement).message.value;
-
-    console.log("Message: ", message);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result;
+      socket?.emit("sendImage", {
+        senderId: userId,
+        receiverId,
+        image: base64,
+      });
+      // Add locally to sender's view
+      setChat((prev) => [
+        ...prev,
+        { senderId: userId, image: base64, time: Date.now() },
+      ]);
+    };
+    reader.readAsDataURL(file);
+    // Reset input
+    e.target.value = "";
   };
 
-  // Handle Notification
-  const handleSendNotification = (e: React.FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    const newSocket = io(process.env.NEXT_PUBLIC_BACKEND_SERVER as string, {
+      transports: ["websocket"],
+    });
+    setSocket(newSocket);
+
+    // Register current user (Initial Registration)
+    newSocket.emit("register", userId);
+
+    return () => {
+      newSocket.disconnect();
+    };
+  }, []);
+
+  // Re-register if userId changes(e.g., tab switch without remount)
+  useEffect(() => {
+    if (socket) {
+      socket.emit("register", userId);
+    }
+  }, [userId, socket]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    // Listen for the private message
+    const handlePrivateMessage = (msg: any) => {
+      setChat((prev) => [...prev, msg]);
+    };
+    socket?.on("privateMessage", handlePrivateMessage);
+
+    // Listen for the private images
+    const handleReceiveImage = (msg: any) => {
+      setChat((prev) => [...prev, msg]);
+    };
+    socket.on("receiverImage", handleReceiveImage);
+
+    return () => {
+      socket?.off("privateMessage", handlePrivateMessage);
+      socket?.off("receiverImage", handleReceiveImage);
+    };
+  }, [socket]);
+
+  const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    // console.log("Message sent!");
+
+    // if(message.trim() && socket) {
+    //   socket?.emit("chatMessage", message)
+    //   setMessage("")
+    // }
+    if (message.trim() && socket) {
+      const msgData = { senderId: userId, text: message, time: Date.now() };
+
+      socket?.emit("privateMessage", {
+        senderId: userId,
+        receiverId,
+        text: message,
+      });
+      // Add locally to sender's view
+      setChat((prev) => [...prev, msgData]);
+      setMessage("");
+    }
   };
 
   return (
-    <div className="flex gap-6 h-screen">
-      {/* Sidebar */}
-      <aside className="w-full h-full max-w-sm bg-white rounded-xl overflow-y-auto">
-        <div className="p-4">
-          <SimpleSearchForm
-            onSearch={(value: string) => setSearchTerm(value)}
+    <div>
+      <h2></h2>
+      <div style={{ height: "200px", overflowY: "auto" }}>
+        {chat.map((msg, i) => (
+          // <p key={i}>
+          //   <strong>{msg.id.slice(0, 4)}:</strong> {msg.text}
+          // </p>
+          <div
+            key={i}
+            className={`flex ${msg.senderId === userId ? "justify-end" : "justify-start"}`}
+          >
+            {msg.image ? (
+              <Image
+                src={msg.image}
+                alt="Sent image"
+                width={200}
+                height={200}
+              />
+            ) : (
+              <p>
+                <strong>{msg.senderId}:</strong> {msg.text}
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+      <form onSubmit={handleSendMessage} className="flex items-center gap-6">
+        {/* <button
+          onClick={fileRef.current && fileRef.current.click()}
+          className="cursor-pointer"
+        >
+        </button> */}
+        <label
+          htmlFor="upload-file"
+          className="cursor-pointer p-2 border rounded"
+        >
+          <FaUpload />
+          <input
+            // ref={fileRef}
+            id="upload-file"
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            style={{ display: "none" }}
           />
-        </div>
-        {/* Chat list */}
-        <div className="space-y-2 p-4">
-          {groupChatData.map((chat, i) => (
-            <div
-              key={i}
-              className="flex items-center justify-between p-3 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200"
-            >
-              <div className="flex items-center space-x-3">
-                <Image
-                  src="/images/user1.jpg"
-                  alt="avatar"
-                  width={80}
-                  height={80}
-                  className="w-14 h-14 rounded-full"
-                />
-                <div className="text-base">
-                  <p className="text-lg font-semibold text-black-primary text-nowrap">
-                    {chat.name}
-                  </p>
-                  <p className="text-black-normal">{chat.text}</p>
-                </div>
-              </div>
-              <span className="text-sm font-medium text-black-normal">
-                {chat.timeAgo}min ago
-              </span>
-            </div>
-          ))}
-        </div>
-      </aside>
-
-      {/* Chat window */}
-      <ChatBody handleSendMessage={handleSendMessage} />
+        </label>
+        <input
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          className="border w-full max-w-xl h-10 px-3 rounded-lg"
+          placeholder="Type..."
+        />
+        <button type="submit">Send</button>
+      </form>
     </div>
   );
-};
-
-export default ChatUI;
+}

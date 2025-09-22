@@ -4,9 +4,12 @@ import { RiSendPlaneFill } from "react-icons/ri";
 
 interface ChatBodyProps {
   handleSendMessage: (e: React.FormEvent<HTMLFormElement>) => void;
+  chat: any;
+  setMessage: React.Dispatch<React.SetStateAction<string>>;
+  message: string;
 }
 
-export default function ChatBody({ handleSendMessage }: ChatBodyProps) {
+export default function ChatBody({ handleSendMessage, chat, setMessage, message }: ChatBodyProps) {
   return (
     <main className="h-full flex-1 bg-white rounded-xl overflow-auto">
       <div className="h-full flex flex-col">
@@ -21,7 +24,7 @@ export default function ChatBody({ handleSendMessage }: ChatBodyProps) {
           />
           <div className="flex-1">
             <p className="font-semibold text-lg text-black-normal">
-              Sahhid Hasan
+              Shahid Hasan
             </p>
             <p className="text-sm text-black-normal flex items-center">
               Active <FaCircle className="ml-1 text-green-500" size={8} />
@@ -33,15 +36,18 @@ export default function ChatBody({ handleSendMessage }: ChatBodyProps) {
           {/* Chat messages */}
           <div className="h-full flex-1 p-4 space-y-4">
             {/* Message group */}
-            {Array(5)
-              .fill(0)
-              .map((_, i) => (
+            {chat
+              ?.map((msg: any) => (
                 <div
-                  key={i}
+                  key={msg?.id}
                   className="flex flex-col space-y-2 overflow-y-auto"
                 >
+                  <div className="">
+                    <strong>{msg?.id}</strong> {msg?.text}
+                  </div>
+
                   {/* Received message */}
-                  <div className="flex items-start space-x-2">
+                  {/* <div className="flex items-start space-x-2">
                     <Image
                       src="/images/user2.webp"
                       alt="avatar"
@@ -53,10 +59,10 @@ export default function ChatBody({ handleSendMessage }: ChatBodyProps) {
                       Hi Jake, how are you? I saw on the app that we’ve crossed
                       paths several times this week
                     </div>
-                  </div>
+                  </div> */}
 
                   {/* Sent message */}
-                  <div className="flex items-end justify-end space-x-2">
+                  {/* <div className="flex items-end justify-end space-x-2">
                     <div className="bg-yellow-secondary px-4 py-2 rounded-lg max-w-md text-black-normal">
                       Hi Jake, how are you?
                     </div>
@@ -67,7 +73,7 @@ export default function ChatBody({ handleSendMessage }: ChatBodyProps) {
                       height={60}
                       className="w-8 h-8 rounded-full"
                     />
-                  </div>
+                  </div> */}
                 </div>
               ))}
           </div>
@@ -80,8 +86,9 @@ export default function ChatBody({ handleSendMessage }: ChatBodyProps) {
             >
               <input
                 type="text"
-                name="message"
                 placeholder="Type your message..."
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
                 className="w-full h-auto py-3  text-[#262626] placeholder:text-[#909090] focus:outline-none"
               />
               <button type="submit" className="cursor-pointer">
